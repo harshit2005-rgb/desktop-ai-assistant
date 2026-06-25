@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Environment Variables
+.env
+
+# Credentials
+credentials/
+
+# Tokens
+tokens/
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Build
+build/
+dist/
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+.mypy_cache/

@@ -13,9 +13,20 @@ from typing import Any, Callable
 from dotenv import load_dotenv
 from groq import Groq
 
+from config.settings import (
+    DEFAULT_MODEL,
+    MAX_TOOL_LOOPS,
+    MAX_TOOL_CONTENT_FOR_LLM,
+    MAX_RECENT_CONTEXT,
+    SYSTEM_PROMPT,
+)
+
 from mcp_servers.application_server import (
     list_running_applications_impl,
     open_application_impl,
+)
+from mcp_servers.browser_server import (
+    open_browser_impl,
 )
 from mcp_servers.document_server import (
     read_file_impl,
@@ -38,41 +49,6 @@ from mcp_servers.gmail_server import (
 )
 
 logger = logging.getLogger(__name__)
-
-SYSTEM_PROMPT = """You are a document-aware AI desktop agent.
-
-You can find files, open files, list directories, inspect file metadata, open
-applications, read documents, search inside documents, summarize documents,
-answer questions from document content, analyze folders, read/search Gmail,
-draft emails, and prepare emails with attachments.
-
-Document rules:
-- Use read_file when the user asks to read, explain, summarize, analyze, or answer questions about a file.
-- If the user gives only a filename or vague file reference, use find_file first when needed, then read the best matching path.
-- For document question answering, answer only from the document content returned by tools. If the document does not contain the answer, say so.
-- For summaries, adapt to requested modes such as technical, beginner-friendly, executive, bullet points, or one paragraph.
-- Default summary format:
-  Summary
-  Key Points
-  Important Information
-  Action Items
-  Conclusion
-- For folder analysis, use list_directory, read relevant supported documents, summarize each document, then provide an overall summary.
-- For "latest" requests, find/list candidates, inspect modification dates with get_file_info, choose the newest modified path, then continue the workflow.
-- Use remembered context for pronouns like "it", "this document", "that file", and "email it".
-- Use Gmail tools for reading recent mail, searching mail, reading a selected message, and creating drafts.
-- Use draft_email for initial email composition, including requests like "send an email to Rahul".
-- Never send automatically. If a send_email or attach_and_send_email tool call is needed, prepare it and ask for explicit confirmation.
-- Before deleting files, moving files, or sending emails, ask for explicit confirmation.
-- If the user confirms a pending email with wording like "send it now", "yes send", or "confirm", use the pending email context.
-
-Keep tool chaining purposeful and concise. Explain completed actions and any limitations, including truncated document reads.
-"""
-
-DEFAULT_MODEL = "llama-3.3-70b-versatile"
-MAX_TOOL_LOOPS = 12
-MAX_TOOL_CONTENT_FOR_LLM = 70_000
-MAX_RECENT_CONTEXT = 12
 
 
 @dataclass
@@ -169,6 +145,7 @@ class AgentService:
             "open_file": open_file_impl,
             "get_file_info": get_file_info_impl,
             "open_application": open_application_impl,
+            "open_browser": open_browser_impl,
             "list_running_applications": list_running_applications_impl,
             "read_file": read_file_impl,
             "summarize_file": summarize_file_impl,
@@ -778,7 +755,27 @@ class AgentService:
             {
                 "type": "function",
                 "function": {
-                    "name": "list_running_applications",
+                    "name": "open_browser",
+                    "description": (
+                    "Open a website in a browser. "
+            "Use this whenever the user asks to open a URL or website."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "Website URL such as github.com or https://google.com",
+                }
+            },
+            "required": ["url"],
+        },
+    },
+},
+{
+    "type": "function",
+    "function": {
+        "name": "list_running_applications",
                     "description": "Return currently running GUI applications on macOS.",
                     "parameters": {"type": "object", "properties": {}},
                 },

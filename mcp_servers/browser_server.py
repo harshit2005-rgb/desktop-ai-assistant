@@ -1,13 +1,11 @@
 """FastMCP browser server for browser automation."""
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 
 from fastmcp import FastMCP
-from playwright.sync_api import sync_playwright
 
+from services.browser_manager import browser_manager
 logger = logging.getLogger(__name__)
 
 mcp = FastMCP("desktop-browser")
@@ -34,21 +32,23 @@ def open_browser_impl(url: str) -> dict[str, Any]:
         target = "https://" + target
 
     try:
-        playwright = sync_playwright().start()
+        print("🔥 Browser tool called")
+        print(f"Opening: {target}")
 
-        browser = playwright.chromium.launch(
-            headless=False
-        )
+        browser = browser_manager.get_browser()
+        print("✅ Browser obtained")
 
         page = browser.new_page()
+        print("✅ New page created")
 
         page.goto(target)
+        print("✅ Navigation completed")
 
         return {
             "success": True,
             "message": f"Opened {target}",
             "url": target,
-        }
+    }
 
     except Exception as exc:
         logger.exception("Unable to open browser")

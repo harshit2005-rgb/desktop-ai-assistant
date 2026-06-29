@@ -12,6 +12,7 @@ from typing import Any, Callable
 
 from dotenv import load_dotenv
 from groq import Groq
+from services.intent_router import intent_router
 
 from config.settings import (
     DEFAULT_MODEL,
@@ -177,6 +178,28 @@ class AgentService:
 
         if self.client is None:
             return self._handle_without_llm(user_message)
+        # Try routing simple commands before calling the LLM.
+        route = intent_router.route(user_message)
+
+        if route is not None:
+            tool_name = route["tool"]
+            arguments = route["arguments"]
+
+            result = self._execute_tool(tool_name, arguments)
+
+            self._update_memory_from_tool(tool_name, arguments, result)
+
+            return AgentResult(
+                result.get("message", "Done."),
+                [
+                    {
+                        "tool": tool_name,
+                        "arguments": arguments,
+                        "result": result,
+                    }
+                ],
+                self.memory.snapshot(),
+            )
 
         self._add_memory_context_message()
         self.messages.append({"role": "user", "content": user_message})

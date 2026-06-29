@@ -27,6 +27,7 @@ from mcp_servers.application_server import (
 )
 from mcp_servers.browser_server import (
     open_browser_impl,
+    google_search_impl,
 )
 from mcp_servers.document_server import (
     read_file_impl,
@@ -146,6 +147,7 @@ class AgentService:
             "get_file_info": get_file_info_impl,
             "open_application": open_application_impl,
             "open_browser": open_browser_impl,
+            "google_search": google_search_impl,
             "list_running_applications": list_running_applications_impl,
             "read_file": read_file_impl,
             "summarize_file": summarize_file_impl,
@@ -753,11 +755,11 @@ class AgentService:
                 },
             },
             {
-                "type": "function",
-                "function": {
-                    "name": "open_browser",
-                    "description": (
-                    "Open a website in a browser. "
+    "type": "function",
+    "function": {
+        "name": "open_browser",
+        "description": (
+            "Open a website in a browser. "
             "Use this whenever the user asks to open a URL or website."
         ),
         "parameters": {
@@ -772,6 +774,23 @@ class AgentService:
         },
     },
 },
+{
+    "type": "function",
+    "function": {
+        "name": "google_search",
+        "description": "Search Google for a query.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                }
+            },
+            "required": ["query"],
+        },
+    },
+},
+                
 {
     "type": "function",
     "function": {

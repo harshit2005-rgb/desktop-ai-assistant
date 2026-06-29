@@ -5,6 +5,7 @@ All configurable constants live here.
 """
 
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_BROWSER = "Google Chrome"
 
 MAX_TOOL_LOOPS = 12
 

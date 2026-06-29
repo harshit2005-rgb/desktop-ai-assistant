@@ -3,34 +3,35 @@ Browser Manager
 
 Responsible for:
 - Starting Playwright
-- Keeping one browser instance alive
-- Returning the browser instance
+- Managing one browser
+- Managing one browser context
+- Managing the current page
 """
 
 from __future__ import annotations
 
-from playwright.sync_api import Browser, Playwright, sync_playwright
+from playwright.sync_api import (
+    Browser,
+    BrowserContext,
+    Page,
+    Playwright,
+    sync_playwright,
+)
 
 
 class BrowserManager:
-    """
-    Singleton-style browser manager.
-
-    Only one browser should exist during the application's lifetime.
-    """
 
     def __init__(self) -> None:
+
         self.playwright: Playwright | None = None
         self.browser: Browser | None = None
+        self.context: BrowserContext | None = None
+        self.page: Page | None = None
 
-    def get_browser(self) -> Browser:
-        """
-        Return an existing browser.
-        Launch one if it doesn't exist.
-        """
+    def _ensure_browser(self) -> None:
 
         if self.browser is not None:
-            return self.browser
+            return
 
         self.playwright = sync_playwright().start()
 
@@ -38,20 +39,37 @@ class BrowserManager:
             headless=False,
         )
 
-        return self.browser
+        self.context = self.browser.new_context()
+
+    def get_page(self) -> Page:
+
+        self._ensure_browser()
+
+        if self.page is None:
+            self.page = self.context.new_page()
+
+        return self.page
+
+    def new_tab(self) -> Page:
+
+        self._ensure_browser()
+
+        self.page = self.context.new_page()
+
+        return self.page
 
     def close(self) -> None:
-        """
-        Close browser and Playwright.
-        """
 
         if self.browser is not None:
             self.browser.close()
-            self.browser = None
 
         if self.playwright is not None:
             self.playwright.stop()
-            self.playwright = None
+
+        self.browser = None
+        self.context = None
+        self.page = None
+        self.playwright = None
 
 
 browser_manager = BrowserManager()

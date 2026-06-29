@@ -74,6 +74,25 @@ def google_search_impl(query: str) -> dict[str, Any]:
         + query.strip().replace(" ", "+")
     )
 
+def read_current_page_impl() -> dict[str, Any]:
+    """
+    Read the title, URL and visible text from the current browser page.
+    """
+
+    try:
+        page = browser_manager.get_page()
+
+        return {
+            "success": True,
+            "title": page.title(),
+            "url": page.url,
+            "content": page.locator("body").inner_text(),
+        }
+
+    except Exception as exc:
+        logger.exception("Unable to read page")
+        return _serialize_error(str(exc))
+
     try:
         subprocess.run(
             [
@@ -103,6 +122,13 @@ def google_search(query: str) -> dict[str, Any]:
     Search Google.
     """
     return google_search_impl(query)
+
+@mcp.tool()
+def read_current_page() -> dict[str, Any]:
+    """
+    Read the currently open webpage.
+    """
+    return read_current_page_impl()
 
 
 if __name__ == "__main__":

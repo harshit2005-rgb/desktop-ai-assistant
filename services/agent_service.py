@@ -28,6 +28,7 @@ from mcp_servers.application_server import (
 from mcp_servers.browser_server import (
     open_browser_impl,
     google_search_impl,
+    
 )
 from mcp_servers.document_server import (
     read_file_impl,
@@ -244,6 +245,10 @@ class AgentService:
 
         try:
             logger.info("Executing tool %s with arguments %s", name, arguments)
+
+            if arguments is None:
+                arguments = {}
+
             return func(**arguments)
         except TypeError as exc:
             logger.exception("Invalid arguments for tool %s", name)

@@ -18,8 +18,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
+from ui.header_widget import HeaderWidget
 from services.agent_service import AgentResult, AgentService
+from ui.theme import (
+    WINDOW_WIDTH,
+    WINDOW_HEIGHT,
+    app_stylesheet,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,14 +59,17 @@ class MainWindow(QMainWindow):
         self.current_thread: QThread | None = None
         self.current_worker: AgentWorker | None = None
 
-        self.setWindowTitle("Desktop MCP Assistant")
-        self.resize(1180, 720)
+        self.setWindowTitle("Sidekick AI")
+        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self._build_ui()
+        self.setStyleSheet(app_stylesheet())
 
     def _build_ui(self) -> None:
         """Create widgets and layouts."""
         container = QWidget()
         root_layout = QVBoxLayout(container)
+        header_widget = HeaderWidget()
+        root_layout.addWidget(header_widget)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
 

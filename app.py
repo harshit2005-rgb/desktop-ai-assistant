@@ -7,7 +7,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from ui.main_window import MainWindow
+from ui.sidekick_window import SidekickWindow
 
 
 def configure_logging() -> None:
@@ -22,7 +22,7 @@ def main() -> int:
     """Start the PySide6 desktop application."""
     configure_logging()
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = SidekickWindow()
     window.show()
     return app.exec()
 

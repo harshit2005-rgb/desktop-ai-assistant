@@ -35,13 +35,25 @@ class IntentRouter:
         # --------------------------
         # Project Analysis
         # --------------------------
-        if text in {
-            "explain this project",
-            "analyze this project",
-            "project overview",
-        }:
+        if any(
+            phrase in text
+            for phrase in (
+                "explain this project",
+                "project overview",
+                "project architecture",
+                "architecture overview",
+                "explain architecture",
+                "describe the architecture",
+                "explain the architecture",
+                "how does this project work",
+                "how does this project use mcp",
+                "how is mcp used",
+                "explain the codebase",
+                "codebase overview",
+            )
+        ):
             return {
-                "tool": "scan_project",
+                "tool": "project_explanation",
                 "arguments": {},
             }
         
@@ -75,6 +87,46 @@ class IntentRouter:
                         "app_name": APPLICATION_ALIASES[alias],
                     },
              }
+        #--------------------------
+        # Open Microsoft Teams
+        #------------------------   
+        if text in {
+            "open teams",
+            "launch teams",
+            "teams",
+            "open microsoft teams",
+        }:
+            return {
+                "tool": "open_teams",
+                "arguments": {},
+            }
+
+        if text in {
+            "teams web",
+            "open teams web",
+        }:
+            return {
+                "tool": "open_teams_web",
+                "arguments": {},
+            }
+
+        if text in {
+            "open teams calendar",
+            "teams calendar",
+        }:
+            return {
+                "tool": "open_teams_calendar",
+                "arguments": {},
+            }
+
+        if text in {
+            "open teams chat",
+            "teams chat",
+        }:
+            return {
+                "tool": "open_teams_chat",
+                "arguments": {},
+            }    
             
         # --------------------------
         # Open File

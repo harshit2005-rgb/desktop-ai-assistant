@@ -13,10 +13,10 @@ from typing import Any, Callable
 from dotenv import load_dotenv
 from groq import Groq
 from services.intent_router import intent_router
-from services.project_scanner import (
-    scan_project,
-    format_project_metadata,
-)
+from services.project_scanner import get_project_context
+from services.project_formatter import format_project
+from mcp_client.registry import MCPRegistry
+from mcp_client.executor import MCPExecutor
 
 from config.settings import (
     DEFAULT_MODEL,
@@ -34,6 +34,12 @@ from mcp_servers.browser_server import (
     open_browser_impl,
     google_search_impl,
     
+)
+from mcp_servers.teams_server import (
+    open_teams_impl,
+    open_teams_web_impl,
+    open_teams_calendar_impl,
+    open_teams_chat_impl,
 )
 from mcp_servers.document_server import (
     read_file_impl,
@@ -53,6 +59,9 @@ from mcp_servers.gmail_server import (
     read_recent_emails_impl,
     search_emails_impl,
     send_email_impl,
+)
+from mcp_servers.project_server import (
+    scan_project_impl,
 )
 
 logger = logging.getLogger(__name__)
@@ -150,8 +159,12 @@ class AgentService:
         else:
             logger.warning("GROQ_API_KEY is not set; using local rule-based fallback")
 
+        # Initialize MCP registry and executor before any tool registration
+        self.registry = MCPRegistry()
+        self.executor = MCPExecutor(self.registry)
+
         self.tool_functions: dict[str, Callable[..., dict[str, Any]]] = {
-            "scan_project": scan_project,
+            "scan_project": scan_project_impl,
             "find_file": find_file_impl,
             "list_directory": list_directory_impl,
             "open_file": open_file_impl,
@@ -169,7 +182,21 @@ class AgentService:
             "search_emails": search_emails_impl,
             "read_email": read_email_impl,
             "attach_and_send_email": attach_and_send_email_impl,
+            "open_teams": open_teams_impl,
+            "open_teams_web": open_teams_web_impl,
+            "open_teams_calendar": open_teams_calendar_impl,
+            "open_teams_chat": open_teams_chat_impl,
         }
+
+        # Register all tools into the MCP registry
+        for name, handler in self.tool_functions.items():
+            self.registry.register(
+                name=name,
+                description=name.replace("_", " "),
+                server="local",
+                handler=handler,
+            )
+
         self.tools = self._build_tool_schemas()
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
         self.memory = ConversationMemory()
@@ -194,7 +221,7 @@ class AgentService:
             tool_name = route["tool"]
             arguments = route["arguments"]
 
-            #Project Explanation Workflow
+            # Project Explanation Workflow
             if tool_name == "project_explanation":
                 return self._handle_project_explanation()
 
@@ -205,45 +232,21 @@ class AgentService:
 
             result = self._execute_tool(tool_name, arguments)
 
-            if (
-                tool_name == "find_file"
-                and result.get("success")
-            ):
+            if tool_name == "find_file" and result.get("success"):
                 self.memory.last_search_query = arguments["filename"]
                 self.memory.last_search_results = result.get("matches", [])
 
-                print("Search Results Stored:")
-                print(self.memory.last_search_results[:3])
-
             self._update_memory_from_tool(tool_name, arguments, result)
 
-            if tool_name == "scan_project" and result.get("project_name"):
-                assistant_message = format_project_metadata(result)
-
             assistant_message = self._summarize_tool_result(tool_name, result)
-            print("Tool Name:", tool_name)
 
-            if tool_name == "scan_project" and result.get("success"):
-                print("Formatting project metadata...")
-                assistant_message = format_project_metadata(result)
-
-            print("Assistant Message:")
-            print(assistant_message)
-
-            #project scanner
-            if tool_name == "scan_project" and result.get("success"):
-                assistant_message = format_project_metadata(result)
-
-            #file search
+            # Custom formatting for file search results
             if tool_name == "find_file" and result.get("success"):
-
                 matches = result.get("matches", [])
-
                 preview = "\n".join(
                     f"{i + 1}. {path}"
                     for i, path in enumerate(matches[:3])
                 )
-
                 assistant_message = (
                     f"Found {len(matches)} matching file(s) for "
                     f"'{arguments['filename']}'.\n\n"
@@ -255,6 +258,7 @@ class AgentService:
                     f"• info 2\n"
                     f"• summarize 3"
                 )
+
             return AgentResult(
                 assistant_message,
                 [
@@ -266,7 +270,7 @@ class AgentService:
                 ],
                 self.memory.snapshot(),
             )
-           
+
 
         self._add_memory_context_message()
         self.messages.append({"role": "user", "content": user_message})
@@ -792,6 +796,22 @@ class AgentService:
             {
                 "type": "function",
                 "function": {
+                    "name": "scan_project",
+                    "description": "Scan a project directory and return structured metadata including language, framework, package manager, entry points, and important files.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "description": "Path to the project directory (defaults to current directory)",
+                            }
+                        },
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
                     "name": "find_file",
                     "description": "Search Desktop, Documents, and Downloads recursively for matching file paths.",
                     "parameters": {
@@ -1042,3 +1062,67 @@ class AgentService:
                 },
             },
         ]
+
+    def _handle_project_explanation(self) -> AgentResult:
+        """Generate a natural language explanation of the current project."""
+
+        context = get_project_context(".")
+
+        if not context.get("success"):
+            return AgentResult(
+                f"Unable to scan project: {context.get('error', 'Unknown error')}",
+                [],
+                self.memory.snapshot(),
+            )
+
+        formatted_context = format_project(context["metadata"])
+
+        prompt = f"""
+        You are a Principal Software Architect reviewing a production-ready software project.
+
+        Your audience is an Engineering Manager.
+
+        Below is automatically generated project context.
+
+        {formatted_context}
+
+        Your job is to explain the project as if you had spent several hours studying the codebase.
+
+        Your explanation must include:
+
+        1. What problem this project solves.
+        2. Overall architecture.
+        3. How the Model Context Protocol (MCP) is used.
+        4. Responsibilities of the important folders.
+        5. Responsibilities of the main services.
+        6. How the request flow works.
+        7. Strengths of the current architecture.
+        8. Possible future improvements.
+
+        Do not simply list metadata.
+
+        Write naturally, professionally and confidently.
+        """
+        
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You explain software architecture clearly.",
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            temperature=0.2,
+        )
+
+        explanation = response.choices[0].message.content or "No explanation generated."
+
+        return AgentResult(
+            explanation,
+            [],
+            self.memory.snapshot(),
+        )

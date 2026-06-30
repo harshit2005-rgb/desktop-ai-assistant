@@ -3,6 +3,49 @@
 from pathlib import Path
 from typing import Any
 
+def _list_python_modules(folder: Path) -> list[str]:
+    """Return Python module names in a folder."""
+
+    if not folder.exists() or not folder.is_dir():
+        return []
+
+    modules = []
+
+    for file in sorted(folder.glob("*.py")):
+        if file.name == "__init__.py":
+            continue
+
+        modules.append(file.stem)
+
+    return modules
+
+def _detect_ai_provider(project_path: Path) -> str:
+    """Detect the AI provider used by the project."""
+
+    model_manager = project_path / "services" / "model_manager.py"
+
+    if not model_manager.exists():
+        return "Unknown"
+
+    try:
+        text = model_manager.read_text(encoding="utf-8").lower()
+
+        if "groq" in text:
+            return "Groq"
+
+        if "openai" in text:
+            return "OpenAI"
+
+        if "gemini" in text:
+            return "Gemini"
+
+        if "ollama" in text:
+            return "Ollama"
+
+    except Exception:
+        pass
+
+    return "Unknown"
 
 def scan_project(path: str) -> dict[str, Any]:
     """
@@ -31,9 +74,13 @@ def scan_project(path: str) -> dict[str, Any]:
             "language": "Unknown",
             "package_manager": "Unknown",
             "framework": "Unknown",
+            "ai_provider": "Unknown",
             "entry_points": [],
             "important_files": [],
             "top_level_dirs": [],
+            "mcp_servers": [],
+            "services": [],
+            "controllers": [],
         }
     
     return {
@@ -44,8 +91,15 @@ def scan_project(path: str) -> dict[str, Any]:
         "framework": _detect_framework(project_path),
         "entry_points": _find_entry_points(project_path),
         "important_files": _find_important_files(project_path),
-         "top_level_dirs": _get_top_level_dirs(project_path),
+        "top_level_dirs": _get_top_level_dirs(project_path),
+
+        # Architecture information
+        "mcp_servers": _list_python_modules(project_path / "mcp_servers"),
+        "services": _list_python_modules(project_path / "services"),
+        "controllers": _list_python_modules(project_path / "controllers"),
+        "ai_provider": _detect_ai_provider(project_path),
     }
+    
 
 
 def _detect_language(project_path: Path) -> str:

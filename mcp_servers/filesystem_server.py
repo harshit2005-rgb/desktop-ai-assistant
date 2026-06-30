@@ -53,7 +53,7 @@ def find_file_impl(filename: str) -> dict[str, Any]:
             logger.warning("Unable to search %s: %s", root, exc)
 
     matches.sort()
-    return {"success": True, "query": query, "count": len(matches), "matches": matches}
+    return {"success": True, "message": f"Found {len(matches)} matching file(s) for '{query}'.", "query": query, "count": len(matches), "matches": matches}
 
 
 def list_directory_impl(path: str) -> dict[str, Any]:
@@ -116,6 +116,7 @@ def get_file_info_impl(path: str) -> dict[str, Any]:
 
     return {
         "success": True,
+        "message": f"Retrieved information for {target.name}.",
         "name": target.name,
         "path": str(target),
         "type": "directory" if target.is_dir() else "file",

@@ -71,6 +71,8 @@ class ConversationMemory:
     last_file_read: str | None = None
     last_file_summarized: str | None = None
     last_searched_file: str | None = None
+    last_search_query: str | None = None
+    last_search_results: list[str] | None = None
     last_folder_analyzed: str | None = None
     last_recipient: str | None = None
     last_email_subject: str | None = None
@@ -87,6 +89,8 @@ class ConversationMemory:
     recent_context: list[str] | None = None
 
     def __post_init__(self) -> None:
+        if self.last_search_results is None:
+            self.last_search_results = []
         if self.recent_context is None:
             self.recent_context = []
         if self.recent_emails is None:
@@ -179,18 +183,55 @@ class AgentService:
         if self.client is None:
             return self._handle_without_llm(user_message)
         # Try routing simple commands before calling the LLM.
-        route = intent_router.route(user_message)
+        route = intent_router.route(user_message, memory=self.memory)
 
         if route is not None:
             tool_name = route["tool"]
             arguments = route["arguments"]
 
+            # Handle error responses from intent router (e.g., invalid search result index)
+            if tool_name == "error":
+                error_message = arguments.get("message", "An error occurred.")
+                return AgentResult(error_message, [], self.memory.snapshot())
+
             result = self._execute_tool(tool_name, arguments)
+
+            if (
+                tool_name == "find_file"
+                and result.get("success")
+            ):
+                self.memory.last_search_query = arguments["filename"]
+                self.memory.last_search_results = result.get("matches", [])
+
+                print("Search Results Stored:")
+                print(self.memory.last_search_results[:3])
 
             self._update_memory_from_tool(tool_name, arguments, result)
 
+            assistant_message = self._summarize_tool_result(tool_name, result)
+
+            if tool_name == "find_file" and result.get("success"):
+
+                matches = result.get("matches", [])
+
+                preview = "\n".join(
+                    f"{i + 1}. {path}"
+                    for i, path in enumerate(matches[:3])
+                )
+
+                assistant_message = (
+                    f"Found {len(matches)} matching file(s) for "
+                    f"'{arguments['filename']}'.\n\n"
+                    f"Top Matches:\n\n"
+                    f"{preview}\n\n"
+                    f"Showing {min(3, len(matches))} of {len(matches)} results.\n\n"
+                    f"You can now say:\n"
+                    f"• open 1\n"
+                    f"• info 2\n"
+                    f"• summarize 3"
+                )
             return AgentResult(
-                result.get("message", "Done."),
+                assistant_message,
                 [
                     {
                         "tool": tool_name,
@@ -200,6 +241,7 @@ class AgentService:
                 ],
                 self.memory.snapshot(),
             )
+            print("THIS SHOULD NEVER PRINT")
 
         self._add_memory_context_message()
         self.messages.append({"role": "user", "content": user_message})

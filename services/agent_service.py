@@ -13,6 +13,10 @@ from typing import Any, Callable
 from dotenv import load_dotenv
 from groq import Groq
 from services.intent_router import intent_router
+from services.project_scanner import (
+    scan_project,
+    format_project_metadata,
+)
 
 from config.settings import (
     DEFAULT_MODEL,
@@ -147,6 +151,7 @@ class AgentService:
             logger.warning("GROQ_API_KEY is not set; using local rule-based fallback")
 
         self.tool_functions: dict[str, Callable[..., dict[str, Any]]] = {
+            "scan_project": scan_project,
             "find_file": find_file_impl,
             "list_directory": list_directory_impl,
             "open_file": open_file_impl,
@@ -189,6 +194,10 @@ class AgentService:
             tool_name = route["tool"]
             arguments = route["arguments"]
 
+            #Project Explanation Workflow
+            if tool_name == "project_explanation":
+                return self._handle_project_explanation()
+
             # Handle error responses from intent router (e.g., invalid search result index)
             if tool_name == "error":
                 error_message = arguments.get("message", "An error occurred.")
@@ -208,8 +217,24 @@ class AgentService:
 
             self._update_memory_from_tool(tool_name, arguments, result)
 
-            assistant_message = self._summarize_tool_result(tool_name, result)
+            if tool_name == "scan_project" and result.get("project_name"):
+                assistant_message = format_project_metadata(result)
 
+            assistant_message = self._summarize_tool_result(tool_name, result)
+            print("Tool Name:", tool_name)
+
+            if tool_name == "scan_project" and result.get("success"):
+                print("Formatting project metadata...")
+                assistant_message = format_project_metadata(result)
+
+            print("Assistant Message:")
+            print(assistant_message)
+
+            #project scanner
+            if tool_name == "scan_project" and result.get("success"):
+                assistant_message = format_project_metadata(result)
+
+            #file search
             if tool_name == "find_file" and result.get("success"):
 
                 matches = result.get("matches", [])
@@ -241,7 +266,7 @@ class AgentService:
                 ],
                 self.memory.snapshot(),
             )
-            print("THIS SHOULD NEVER PRINT")
+           
 
         self._add_memory_context_message()
         self.messages.append({"role": "user", "content": user_message})

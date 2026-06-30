@@ -32,6 +32,19 @@ class IntentRouter:
         if result is not None:
             return result
 
+        # --------------------------
+        # Project Analysis
+        # --------------------------
+        if text in {
+            "explain this project",
+            "analyze this project",
+            "project overview",
+        }:
+            return {
+                "tool": "scan_project",
+                "arguments": {},
+            }
+        
         # Open website
         if text.startswith("open ") and (
             ".com" in text or ".org" in text or ".io" in text

@@ -148,7 +148,7 @@ class ConversationMemory:
 class AgentService:
     """Groq-backed desktop assistant with MCP tool execution."""
 
-    def __init__(self) -> None:
+    def __init__(self, on_status=None) -> None:
         load_dotenv()
         self.model = os.getenv("GROQ_MODEL", DEFAULT_MODEL)
         self.client: Groq | None = None
@@ -200,6 +200,7 @@ class AgentService:
         self.tools = self._build_tool_schemas()
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
         self.memory = ConversationMemory()
+        self.on_status = on_status
 
     def handle_message(self, user_message: str) -> AgentResult:
         """Process a user request and return assistant text plus tool outputs."""
@@ -336,6 +337,10 @@ class AgentService:
         if func is None:
             logger.error("Unknown tool requested: %s", name)
             return {"success": False, "error": f"Unknown tool: {name}"}
+        
+        if self.on_status:
+            pretty_name = name.replace("_", " ").title()
+            self.on_status(pretty_name)
 
         try:
             logger.info("Executing tool %s with arguments %s", name, arguments)

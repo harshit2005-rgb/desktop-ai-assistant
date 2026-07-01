@@ -1,15 +1,15 @@
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame,
     QLabel,
-    QHBoxLayout,
     QVBoxLayout,
 )
 
 from ui.theme import COLORS
+from PySide6.QtWidgets import QApplication
 
 
 class HeaderWidget(QFrame):
+
     def __init__(self):
         super().__init__()
 
@@ -17,42 +17,56 @@ class HeaderWidget(QFrame):
 
         self.setStyleSheet(f"""
         QFrame#headerCard {{
-            background-color: {COLORS["surface"]};
-            border-radius: 12px;
-            padding: 8px;
+            background:{COLORS["surface"]};
+            border-radius:14px;
+            border:1px solid {COLORS["border"]};
         }}
 
         QLabel {{
-            color: {COLORS["text"]};
-            background: transparent;
+            background:transparent;
+            color:{COLORS["text"]};
         }}
         """)
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(16, 12, 16, 12)
-        root.setSpacing(10)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 14, 18, 14)
+        layout.setSpacing(4)
 
-        title = QLabel("🤖 Sidekick AI")
-        title.setStyleSheet("""
+        self.title = QLabel("🤖 Sidekick AI")
+        self.title.setStyleSheet("""
             font-size:18px;
             font-weight:700;
         """)
 
-        root.addWidget(title)
+        layout.addWidget(self.title)
 
-        status = QHBoxLayout()
+        self.status = QLabel()
+        self.status.setStyleSheet("""
+            color:#A8A8A8;
+            font-size:11px;
+        """)
 
-        ready = QLabel("🟢 Ready")
-        provider = QLabel("Groq")
-        mcp = QLabel("7 MCP Servers")
-        memory = QLabel("Memory ✓")
+        layout.addWidget(self.status)
 
-        status.addWidget(ready)
-        status.addStretch()
-        status.addWidget(provider)
-        status.addStretch()
-        status.addWidget(mcp)
-        status.addStretch()
-        status.addWidget(memory)
+        self.set_ready()
 
-        root.addLayout(status)
+    # -----------------------------
+    # States
+    # -----------------------------
+
+    def set_ready(self):
+        self.status.setText(
+            "🟢 Ready • Groq • 7 MCP Servers"
+        )
+
+    def set_thinking(self):
+        self.status.setText("🔵 Thinking...")
+        QApplication.processEvents()
+
+    def set_working(self, tool: str):
+        print("STATUS:", tool)
+        self.status.setText(f"⚡ Using {tool}")
+        QApplication.processEvents()
+
+    def set_error(self, message="Something went wrong"):
+        self.status.setText(f"🔴 {message}") 

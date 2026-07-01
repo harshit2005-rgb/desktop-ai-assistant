@@ -1,10 +1,12 @@
 from PySide6.QtWidgets import (
     QFrame,
-    QTextBrowser,
+    QWidget,
     QVBoxLayout,
+    QScrollArea,
 )
 
 from ui.theme import COLORS
+from ui.message_bubble import MessageBubble
 
 
 class ChatWidget(QFrame):
@@ -17,62 +19,86 @@ class ChatWidget(QFrame):
         self.setStyleSheet(f"""
         QFrame#chatCard {{
             background:{COLORS["surface"]};
-            border-radius:12px;
+            border-radius:14px;
         }}
 
-        QTextBrowser {{
+        QScrollArea {{
             border:none;
             background:transparent;
-            color:{COLORS["text"]};
-            padding:12px;
-            font-size:11pt;
+        }}
+
+        QWidget {{
+            background:transparent;
         }}
         """)
 
-        layout = QVBoxLayout(self)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
 
-        self.chat = QTextBrowser()
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QScrollArea.NoFrame)
 
-        layout.addWidget(self.chat)
+        self.container = QWidget()
 
-        self.append_assistant(
-            "👋 Welcome to <b>Sidekick AI</b><br><br>"
-            "I'm your desktop AI companion powered by MCP.<br><br>"
-            "I can help you with:<br>"
-            "• 📁 File Management<br>"
-            "• 📧 Gmail<br>"
-            "• 👥 Microsoft Teams<br>"
-            "• 🌐 Browser Automation<br>"
-            "• 📄 PDF Analysis<br>"
-            "• 💻 Project Understanding"
+        self.messages = QVBoxLayout(self.container)
+        self.messages.setContentsMargins(14, 14, 14, 14)
+        self.messages.setSpacing(10)
+        self.messages.addStretch()
+
+        self.scroll.setWidget(self.container)
+
+        root.addWidget(self.scroll)
+
+        self.show_welcome()
+
+    def _scroll_bottom(self):
+        bar = self.scroll.verticalScrollBar()
+        bar.setValue(bar.maximum())
+
+    def _add(self, role, text):
+
+        bubble = MessageBubble(role, text)
+
+        self.messages.insertWidget(
+            self.messages.count() - 1,
+            bubble,
         )
 
-    def append_user(self, text: str):
-        self.chat.append(
-            f"""
-            <div style="
-                background:#2E2E2E;
-                padding:10px;
-                border-radius:10px;
-                margin:8px;
-            ">
-            👤 <b>You</b><br><br>
-            {text}
-            </div>
-            """
+        self._scroll_bottom()
+
+    def show_welcome(self):
+
+        while self.messages.count() > 1:
+
+            item = self.messages.takeAt(0)
+
+            if item.widget():
+                item.widget().deleteLater()
+
+        self._add(
+            "assistant",
+            """👋 Welcome to Sidekick AI
+
+Your intelligent desktop companion powered by MCP.
+
+I can help with:
+
+• File Management
+• Gmail
+• Microsoft Teams
+• Browser Automation
+• PDF Analysis
+• Project Understanding
+
+Ask me anything."""
         )
 
-    def append_assistant(self, text: str):
-        self.chat.append(
-            f"""
-            <div style="
-                background:#1F2937;
-                padding:10px;
-                border-radius:10px;
-                margin:8px;
-            ">
-            🤖 <b>Sidekick AI</b><br><br>
-            {text}
-            </div>
-            """
-        )
+    def add_user_message(self, text):
+        self._add("user", text)
+
+    def add_assistant_message(self, text):
+        self._add("assistant", text)
+
+    def clear_chat(self):
+        self.show_welcome()

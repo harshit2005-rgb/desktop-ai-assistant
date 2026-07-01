@@ -18,7 +18,7 @@ class ChatWidget(QFrame):
 
         self.setStyleSheet(f"""
         QFrame#chatCard {{
-            background:{COLORS["surface"]};
+            background:#000000;
             border-radius:14px;
         }}
 

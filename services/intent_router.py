@@ -101,6 +101,41 @@ class IntentRouter:
                 "arguments": {},
             }
 
+        # --------------------------
+        # GitHub
+        # --------------------------
+        if text in {"show my repositories", "list repositories"}:
+            return {
+                "tool": "list_repositories",
+                "arguments": {},
+            }
+
+        if text == "recent commits":
+            return {
+                "tool": "list_recent_commits",
+                "arguments": {
+                    "repo": None,
+                    "limit": 5,
+                },
+            }
+
+        if text == "latest commit":
+            return {
+                "tool": "get_commit",
+                "arguments": {
+                    "repo": None,
+                    "sha": "HEAD",
+                },
+            }
+
+        if text == "repository details":
+            return {
+                "tool": "get_repository",
+                "arguments": {
+                    "repo": None,
+                },
+            }
+
         if text in {
             "teams web",
             "open teams web",

@@ -4,9 +4,9 @@ WINDOW_WIDTH = 430
 WINDOW_HEIGHT = 720
 
 COLORS = {
-    "background": "#181818",
-    "surface": "#242424",
-    "surface_light": "#2E2E2E",
+    "background": "#000000",
+    "surface": "#050505",
+    "surface_light": "#0D0D0D",
 
     "primary": "#00C2FF",
     "primary_hover": "#009FCC",
@@ -20,7 +20,7 @@ COLORS = {
 
     "border": "#3A3A3A",
 
-    "input": "#303030",
+    "input": "#0E0E0E",
 }
 
 FONT = {

@@ -38,7 +38,6 @@ class SidekickWindow(QWidget):
     def build_ui(self):
 
         self.layout = QVBoxLayout(self)
-
         self.layout.setContentsMargins(8, 8, 8, 8)
         self.layout.setSpacing(8)
 
@@ -90,6 +89,7 @@ class SidekickWindow(QWidget):
 
         self.chat.add_user_message(message)
 
+        self.header.start_activity()
         self.header.set_thinking()
 
         QApplication.processEvents()
@@ -113,3 +113,5 @@ class SidekickWindow(QWidget):
             )
 
             self.header.set_error()
+        else:
+            self.header.stop_activity()

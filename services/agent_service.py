@@ -60,6 +60,13 @@ from mcp_servers.gmail_server import (
     search_emails_impl,
     send_email_impl,
 )
+from mcp_servers.github_server import (
+    get_commit_impl,
+    get_repository_impl,
+    list_branches_impl,
+    list_recent_commits_impl,
+    list_repositories_impl,
+)
 from mcp_servers.project_server import (
     scan_project_impl,
 )
@@ -186,6 +193,11 @@ class AgentService:
             "open_teams_web": open_teams_web_impl,
             "open_teams_calendar": open_teams_calendar_impl,
             "open_teams_chat": open_teams_chat_impl,
+            "list_repositories": list_repositories_impl,
+            "list_branches": list_branches_impl,
+            "list_recent_commits": list_recent_commits_impl,
+            "get_commit": get_commit_impl,
+            "get_repository": get_repository_impl,
         }
 
         # Register all tools into the MCP registry
@@ -1063,6 +1075,68 @@ class AgentService:
                             "file_path": {"type": "string"},
                         },
                         "required": ["recipient", "subject", "body", "file_path"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "list_repositories",
+                    "description": "List GitHub repositories visible to the configured GitHub account.",
+                    "parameters": {"type": "object", "properties": {}},
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "list_branches",
+                    "description": "List branches for a GitHub repository.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"repo": {"type": "string"}},
+                        "required": ["repo"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "list_recent_commits",
+                    "description": "List recent commits for a GitHub repository.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "repo": {"type": "string"},
+                            "limit": {"type": "integer"},
+                        },
+                        "required": ["repo"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_commit",
+                    "description": "Get a specific GitHub commit by repository and SHA/ref.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "repo": {"type": "string"},
+                            "sha": {"type": "string"},
+                        },
+                        "required": ["repo", "sha"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_repository",
+                    "description": "Get GitHub repository metadata and details.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"repo": {"type": "string"}},
+                        "required": ["repo"],
                     },
                 },
             },

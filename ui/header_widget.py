@@ -1,9 +1,12 @@
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame,
+    QHBoxLayout,
     QLabel,
     QVBoxLayout,
 )
 
+from ui.activity_indicator import ActivityIndicator
 from ui.theme import COLORS
 from PySide6.QtWidgets import QApplication
 
@@ -32,13 +35,25 @@ class HeaderWidget(QFrame):
         layout.setContentsMargins(18, 14, 18, 14)
         layout.setSpacing(4)
 
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(0, 0, 0, 0)
+        title_row.setSpacing(8)
+
         self.title = QLabel("🤖 Sidekick AI")
         self.title.setStyleSheet("""
             font-size:18px;
             font-weight:700;
         """)
+        self.title.setAlignment(Qt.AlignVCenter)
 
-        layout.addWidget(self.title)
+        self.activity_indicator = ActivityIndicator(self)
+        self.activity_indicator.setObjectName("activityIndicator")
+
+        title_row.addWidget(self.title)
+        title_row.addStretch()
+        title_row.addWidget(self.activity_indicator)
+
+        layout.addLayout(title_row)
 
         self.status = QLabel()
         self.status.setStyleSheet("""
@@ -55,18 +70,26 @@ class HeaderWidget(QFrame):
     # -----------------------------
 
     def set_ready(self):
-        self.status.setText(
-            "🟢 Ready • Groq • 7 MCP Servers"
-        )
+        self.stop_activity()
+        self.status.setText("Ready • Groq • 7 MCP Servers")
 
     def set_thinking(self):
-        self.status.setText("🔵 Thinking...")
+        self.start_activity()
+        self.status.setText("Thinking...")
         QApplication.processEvents()
 
     def set_working(self, tool: str):
+        self.start_activity()
         print("STATUS:", tool)
-        self.status.setText(f"⚡ Using {tool}")
+        self.status.setText(f"Using {tool}")
         QApplication.processEvents()
 
     def set_error(self, message="Something went wrong"):
-        self.status.setText(f"🔴 {message}") 
+        self.stop_activity()
+        self.status.setText(message)
+
+    def start_activity(self):
+        self.activity_indicator.start_activity()
+
+    def stop_activity(self):
+        self.activity_indicator.stop_activity() 
